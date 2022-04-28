@@ -6,7 +6,7 @@
 #endif
 #define _VIP_included
 
-#define DATABASE_ENTRY "VIP"
+#define DATABASE_ENTRY "vip_csgo"
 
 #define PREFIX " \x04[VIP]\x01"
 #define PREFIX_ACTIVITY " \x04[VIP]\x01 "

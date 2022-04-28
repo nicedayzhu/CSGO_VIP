@@ -147,17 +147,20 @@ public Action Command_AddVIP(int client, int args)
 		return Plugin_Handled;
 	}
 	
-	if (args != 2)
+	PrintToChat(client, "args = %d", args);
+	if (args != 3)
 	{
-		ReplyToCommand(client, "%s Usage: sm_addvip <steamid> <days>", PREFIX);
+		ReplyToCommand(client, "%s Usage: sm_addvip \"<SteamID>\" <days> \"<name>\"", PREFIX);
 		return Plugin_Handled;
 	}
 	
-	char szArg[32], szArg2[10];
+	char szArg[32], szArg2[10], szArg3[32];
 	GetCmdArg(1, szArg, sizeof(szArg));
 	GetCmdArg(2, szArg2, sizeof(szArg2));
+	GetCmdArg(3, szArg3, sizeof(szArg3));
 	
-	Regex rSteam = new Regex("/^STEAM_[0-5]:[01]:\\d+$/");
+	// Regex rSteam = new Regex("/^STEAM_[0-5]:[0-1]:\\d{8}$/");
+	Regex rSteam = new Regex("^STEAM_[0-1]:[0-1]:\\d{8}$");
 	
 	if (rSteam.Match(szArg) != 1)
 	{
@@ -175,8 +178,8 @@ public Action Command_AddVIP(int client, int args)
 		return Plugin_Handled;
 	}
 	
-	SQL_AddOfflineVIP(szArg, iDuration);
-	ShowActivity2(client, PREFIX_ACTIVITY, "Gave a vip to \x02\"%s\" \x01for \x04%s \x01days.", szArg, addCommas(iDuration));
+	SQL_AddOfflineVIP(szArg, iDuration, szArg3);
+	ShowActivity2(client, PREFIX_ACTIVITY, "Gave a vip to \x02\"%s\" \x02\"%s\" \x01for \x04%s \x01days.", szArg, szArg3, addCommas(iDuration));
 	
 	return Plugin_Handled;
 }
@@ -263,7 +266,7 @@ void Menus_ShowPlayer(int client)
 	Format(szBuffer, sizeof(szBuffer), "Target: %s", szBuffer);
 	menu.AddItem("target", szBuffer);
 	
-	Format(szBuffer, sizeof(szBuffer), "Duration: %s days", addCommas(g_iDuration[client]));
+	Format(szBuffer, sizeof(szBuffer), "Choose Duration");
 	menu.AddItem("duration", szBuffer);
 	menu.AddItem("add", "Add VIP");
 	
@@ -285,7 +288,8 @@ public int Handler_PlayerManagement(Menu menu, MenuAction action, int client, in
 			Menus_SelectPlayer(client);
 		} else if (!strcmp(szInfo, "duration")) {
 			g_bWriting[client] = true;
-			PrintToChat(client, "%s Write the amount of days you want or \x02-1 \x01to abort.", PREFIX);
+			Menus_ShowDuration(client);
+			// PrintToChat(client, "%s Write the amount of days you want or \x02-1 \x01to abort.", PREFIX);
 		} else if (!strcmp(szInfo, "add")) {
 			if (!IsClientInGame(g_iTarget[client]))
 			{
@@ -324,6 +328,35 @@ public int Handler_PlayerManagement(Menu menu, MenuAction action, int client, in
 	}
 }
 
+void Menus_ShowDuration(int client)
+{
+	Menu menu = new Menu(Handler_DurationManagement);
+	menu.SetTitle("%s Choose a Duration:\n ", PREFIX_MENU);
+	
+	menu.AddItem("testVip", "1 day test");
+	menu.AddItem("1", "1 Month");
+	menu.AddItem("2", "2 Month");
+	
+	menu.ExitBackButton = true;
+	menu.Display(client, MENU_TIME_FOREVER);
+}
+
+int g_iTestVipDuration = 1; //1 day vip test
+public int Handler_DurationManagement(Handle menu, MenuAction action, int client, int item) {
+	char cValue[32];
+	GetMenuItem(menu, item, cValue, sizeof(cValue));
+	if (action == MenuAction_Select) {
+		if (StrEqual(cValue, "testVip")) {
+			g_iDuration[client] = g_iTestVipDuration;
+			PrintToConsole(client, "1 day test vip");
+			Menus_ShowPlayer(client);
+		} else {
+			g_iDuration[client] = StringToInt(cValue);
+			PrintToConsole(client, "%d month vip", g_iDuration[client]);
+			Menus_ShowPlayer(client);
+		}
+	}
+}
 public int Handler_ManageVIPs(Menu menu, MenuAction action, int client, int itemNum)
 {
 	if (action == MenuAction_Cancel && itemNum == MenuCancel_ExitBack)
@@ -347,7 +380,6 @@ public int Handler_ManageVIP(Menu menu, MenuAction action, int client, int itemN
 	} else if (action == MenuAction_Select) {
 		char szAuth[32];
 		menu.GetItem(itemNum, szAuth, sizeof(szAuth));
-		
 		SQL_RemoveVIP(szAuth);
 	}
 }
@@ -444,12 +476,12 @@ void SQL_AddVIP(int client)
 	g_dbDatabase.Query(SQL_CheckForErrors, szQuery);
 }
 
-void SQL_AddOfflineVIP(char[] auth, int duration)
+void SQL_AddOfflineVIP(char[] auth, int duration, char[] name)
 {
 	int iExpiration = GetTime() + (duration * DAY_TO_SECONDS);
 	
 	char szQuery[512];
-	FormatEx(szQuery, sizeof(szQuery), "INSERT INTO `vips` (`auth`, `name`, `expiration`) VALUES ('%s', 'Added Offline', %d) ON DUPLICATE KEY UPDATE `expiration` = %d", auth, iExpiration, iExpiration);
+	FormatEx(szQuery, sizeof(szQuery), "INSERT INTO `vips` (`auth`, `name`, `expiration`) VALUES ('%s', '%s', %d) ON DUPLICATE KEY UPDATE `expiration` = %d", auth, name, iExpiration, iExpiration);
 	g_dbDatabase.Query(SQL_CheckForErrors, szQuery);
 }
 
@@ -523,7 +555,7 @@ public void SQL_FetchVIP(Database db, DBResultSet results, const char[] error, a
 		
 		Menu menu = new Menu(Handler_ManageVIP);
 		menu.SetTitle("%s Manage VIP - Viewing \"%s\"\nExpire Date: %s\n ", PREFIX_MENU, szName, szTime);
-		menu.AddItem("remove", "Remove VIP");
+		menu.AddItem(szAuth, "Remove VIP");
 		menu.ExitBackButton = true;
 		menu.Display(iClient, MENU_TIME_FOREVER);
 	}
