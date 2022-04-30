@@ -1,0 +1,15 @@
+"Phrases"
+{
+	"VIP Management"
+	{
+		"en"			"VIP Management"
+	}
+	"add"
+	{
+		"en"			"Add a VIP"
+	}
+	"manage"
+	{
+		"en"			"Manage VIPs"
+	}
+}

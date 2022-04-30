@@ -1,0 +1,15 @@
+"Phrases"
+{
+	"VIP Management"
+	{
+		"chi"			"VIP 管理菜单"
+	}
+	"add"
+	{
+		"chi"			"添加VIP"
+	}
+	"manage"
+	{
+		"chi"			"管理所有VIP"
+	}
+}

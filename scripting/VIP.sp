@@ -6,6 +6,7 @@
 #define PLUGIN_VERSION "1.0"
 
 #define DAY_TO_SECONDS 86400
+#define MONTH_TO_DAY 30
 
 enum struct Player
 {
@@ -53,6 +54,7 @@ public Plugin myinfo =
 
 public void OnPluginStart()
 {
+	LoadTranslations("csgo-vip.phrases");
 	SQL_MakeConnection();
 	
 	HookEvent("round_start", Event_RoundStart);
@@ -190,10 +192,15 @@ public Action Command_AddVIP(int client, int args)
 
 void Menus_ShowMain(int client)
 {
+	char buffer[60];
 	Menu menu = new Menu(Handler_MainMenu);
-	menu.SetTitle("%s VIP Management\n ", PREFIX_MENU);
-	menu.AddItem("add", "Add a VIP");
-	menu.AddItem("manage", "Manage VIPs");
+	menu.SetTitle("%s %T\n ", PREFIX_MENU, "VIP Management", client); //translations use client LANG, https://wiki.alliedmods.net/Translations_(SourceMod_Scripting)
+
+	Format(buffer, sizeof(buffer), "%T", "add", client);
+	menu.AddItem("add", buffer);
+	Format(buffer, sizeof(buffer), "%T", "manage", client);
+	menu.AddItem("manage", buffer);
+
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
@@ -348,11 +355,11 @@ public int Handler_DurationManagement(Handle menu, MenuAction action, int client
 	if (action == MenuAction_Select) {
 		if (StrEqual(cValue, "testVip")) {
 			g_iDuration[client] = g_iTestVipDuration;
-			PrintToConsole(client, "1 day test vip");
+			// PrintToConsole(client, "1 day test vip");
 			Menus_ShowPlayer(client);
 		} else {
-			g_iDuration[client] = StringToInt(cValue);
-			PrintToConsole(client, "%d month vip", g_iDuration[client]);
+			g_iDuration[client] = StringToInt(cValue) * MONTH_TO_DAY;
+			// PrintToConsole(client, "%d month vip", g_iDuration[client]);
 			Menus_ShowPlayer(client);
 		}
 	}
